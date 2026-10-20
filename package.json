@@ -1,5 +1,5 @@
 {
-  "name": "f-te-folio-ai-event-planning-atelier",
+  "name": "f-te-folio-enterprise-ai-event-planning-atelier-india-global-edition",
   "workspaces": ["frontend", "backend"], 
   "scripts": {
     "dev-frontend": "npm run dev --prefix frontend",
