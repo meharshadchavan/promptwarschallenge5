@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
-// Fix: Replace non-existent MessageSquareSparkles icon with MessageSquare from lucide-react
 import {
   Sparkles,
   Plus,
   LayoutGrid,
-  DollarSign,
+  IndianRupee,
   CalendarClock,
   CheckSquare,
   Palette,
   MessageSquare,
+  ShieldCheck,
+  Globe,
 } from 'lucide-react';
 import { INITIAL_EVENTS } from './constants';
-import { EventPlan, WorkspaceTab } from './types';
+import { EventPlan, SupportedLanguage, WorkspaceTab } from './types';
+import {
+  SUPPORTED_LANGUAGES,
+  UI_TRANSLATIONS,
+  formatINR,
+} from './services/i18nService';
 import { OverviewCanvas } from './components/OverviewCanvas';
 import { BudgetManager } from './components/BudgetManager';
 import { TimelinePlanner } from './components/TimelinePlanner';
@@ -19,8 +25,9 @@ import { VendorChecklist } from './components/VendorChecklist';
 import { CreativeStudio } from './components/CreativeStudio';
 import { NewEventWizardModal } from './components/NewEventWizardModal';
 import { CopilotDrawer } from './components/CopilotDrawer';
+import { GuardrailDiagnostics } from './components/GuardrailDiagnostics';
 
-const STORAGE_KEY = 'fete_and_folio_events_v1';
+const STORAGE_KEY = 'fete_and_folio_india_events_v2';
 
 export function App() {
   const [events, setEvents] = useState<EventPlan[]>(() => {
@@ -31,11 +38,12 @@ export function App() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {
-      // Fallback to initial events
+      // Fallback to initial curated Indian events
     }
     return INITIAL_EVENTS;
   });
 
+  const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [activeEventId, setActiveEventId] = useState<string>(events[0].id);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>(
     WorkspaceTab.OVERVIEW
@@ -43,6 +51,8 @@ export function App() {
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
   const [copilotPrompt, setCopilotPrompt] = useState<string | null>(null);
+
+  const t = UI_TRANSLATIONS[language];
 
   useEffect(() => {
     try {
@@ -77,38 +87,46 @@ export function App() {
   const navItems = [
     {
       tab: WorkspaceTab.OVERVIEW,
-      label: 'Overview & Blueprint',
+      label: t.tabNames[WorkspaceTab.OVERVIEW],
       icon: LayoutGrid,
     },
     {
       tab: WorkspaceTab.BUDGET,
-      label: 'Budget Ledger',
-      icon: DollarSign,
+      label: t.tabNames[WorkspaceTab.BUDGET],
+      icon: IndianRupee,
     },
     {
       tab: WorkspaceTab.TIMELINE,
-      label: 'Timeline & Run of Show',
+      label: t.tabNames[WorkspaceTab.TIMELINE],
       icon: CalendarClock,
     },
     {
       tab: WorkspaceTab.VENDORS,
-      label: 'Vendor Checklist',
+      label: t.tabNames[WorkspaceTab.VENDORS],
       icon: CheckSquare,
     },
     {
       tab: WorkspaceTab.STUDIO,
-      label: 'Creative AI Studio',
+      label: t.tabNames[WorkspaceTab.STUDIO],
       icon: Palette,
+    },
+    {
+      tab: WorkspaceTab.DIAGNOSTICS,
+      label: t.tabNames[WorkspaceTab.DIAGNOSTICS],
+      icon: ShieldCheck,
     },
   ];
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#FBF9F5] text-[#1C1917]">
       {/* Left Atelier Navigation Sidebar */}
-      <aside className="w-full lg:w-72 bg-[#F3EFEA] border-b lg:border-b-0 lg:border-r border-[#E6E0D6] flex flex-col justify-between shrink-0">
+      <aside
+        aria-label="Event Folio & Module Navigation"
+        className="w-full lg:w-76 bg-[#F3EFEA] border-b lg:border-b-0 lg:border-r border-[#E6E0D6] flex flex-col justify-between shrink-0"
+      >
         <div className="p-6 space-y-6">
           {/* Brand Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#C86D51]" />
@@ -116,8 +134,8 @@ export function App() {
                   Fête &amp; Folio
                 </span>
               </div>
-              <p className="text-[11px] uppercase tracking-[0.15em] text-[#68625D] mt-0.5">
-                Bespoke Event Atelier
+              <p className="text-[11px] uppercase tracking-[0.12em] text-[#68625D] mt-0.5">
+                {t.appSubtitle}
               </p>
             </div>
 
@@ -127,14 +145,40 @@ export function App() {
               title="Commission a new AI Event Blueprint"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>New Event</span>
+              <span>{t.newEventBtn}</span>
             </button>
+          </div>
+
+          {/* Multilingual Selector (English, Hindi, Marathi, French, Spanish) */}
+          <div className="bg-white/80 border border-[#E6E0D6] rounded-xl p-3">
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-semibold text-[#68625D] mb-2">
+              <Globe className="w-3.5 h-3.5 text-[#C86D51]" />
+              <span>Language / भाषा निवड</span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const active = language === lang.code;
+                return (
+                  <button
+                    key={lang.code}
+                    onClick={() => setLanguage(lang.code)}
+                    className={`px-2 py-1.5 rounded-lg text-xs font-semibold transition-all truncate ${
+                      active
+                        ? 'bg-[#1C1917] text-white shadow-sm'
+                        : 'bg-[#F3EFEA] text-[#1C1917] hover:bg-[#E6E0D6]'
+                    }`}
+                  >
+                    {lang.nativeName.split(' ')[0]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Event Portfolio Switcher */}
           <div>
             <label className="block text-[10px] uppercase tracking-[0.14em] font-semibold text-[#68625D] mb-2">
-              Active Event Folios
+              {t.activeFolios}
             </label>
             <div className="space-y-1.5">
               {events.map((evt) => {
@@ -150,9 +194,9 @@ export function App() {
                     }`}
                   >
                     <div className="flex items-center justify-between text-[10px] uppercase tracking-wider font-semibold text-[#C86D51] mb-0.5">
-                      <span>{evt.type}</span>
+                      <span>{t.eventTypeNames[evt.type]}</span>
                       <span className="font-mono text-[#68625D]">
-                        ${(evt.totalBudget / 1000).toFixed(1)}k
+                        {formatINR(evt.totalBudget, language)}
                       </span>
                     </div>
                     <div className="font-serif text-base font-semibold text-[#1C1917] leading-snug line-clamp-1">
@@ -168,9 +212,9 @@ export function App() {
           </div>
 
           {/* Workspace Module Navigation */}
-          <nav className="space-y-1">
+          <nav className="space-y-1" aria-label="Workspace Tabs">
             <div className="text-[10px] uppercase tracking-[0.14em] font-semibold text-[#68625D] mb-2">
-              Planning Modules
+              {t.planningModules}
             </div>
             {navItems.map(({ tab, label, icon: Icon }) => {
               const active = activeTab === tab;
@@ -203,10 +247,10 @@ export function App() {
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-[#1C1917] to-[#322C28] hover:from-[#C86D51] hover:to-[#b55d42] text-white text-xs font-semibold shadow-sm transition-all"
           >
             <Sparkles className="w-4 h-4 text-[#D4A359]" />
-            <span>Open AI Producer Desk</span>
+            <span>{t.openAiProducer}</span>
           </button>
           <p className="text-[11px] text-[#68625D] text-center leading-relaxed">
-            Folios auto-save locally in this browser.
+            {t.localPersistenceNotice}
           </p>
         </div>
       </aside>
@@ -217,7 +261,7 @@ export function App() {
         <header className="sticky top-0 z-20 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-[#E6E0D6] px-6 py-3.5 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <span className="text-xs font-serif italic text-[#68625D] hidden sm:inline">
-              Active Folio:
+              {t.activeFolioLabel}
             </span>
             <h2 className="font-serif text-lg md:text-xl font-semibold text-[#1C1917] truncate">
               {activeEvent.title}
@@ -226,20 +270,27 @@ export function App() {
 
           <div className="flex items-center gap-2.5">
             <button
+              onClick={() => setActiveTab(WorkspaceTab.DIAGNOSTICS)}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#3B6E52]/30 bg-[#3B6E52]/10 text-xs font-semibold text-[#3B6E52] transition-colors"
+            >
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Guardrails Verified</span>
+            </button>
+
+            <button
               onClick={() => setIsWizardOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E6E0D6] bg-white hover:border-[#C86D51] text-xs font-semibold text-[#1C1917] transition-colors"
             >
               <Plus className="w-3.5 h-3.5 text-[#C86D51]" />
-              <span>AI Blueprint Wizard</span>
+              <span>{t.aiBlueprintWizard}</span>
             </button>
 
             <button
               onClick={() => setIsCopilotOpen((prev) => !prev)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#C86D51] hover:bg-[#b55d42] text-white text-xs font-semibold transition-colors"
             >
-              {/* Fix: Use MessageSquare instead of MessageSquareSparkles */}
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>AI Copilot</span>
+              <span>{t.aiCopilot}</span>
             </button>
           </div>
         </header>
@@ -249,14 +300,17 @@ export function App() {
           {activeTab === WorkspaceTab.OVERVIEW && (
             <OverviewCanvas
               event={activeEvent}
+              language={language}
               onNavigateTab={setActiveTab}
               onOpenCopilotWithPrompt={handleOpenCopilotWithPrompt}
+              onUpdateEvent={handleUpdateActiveEvent}
             />
           )}
 
           {activeTab === WorkspaceTab.BUDGET && (
             <BudgetManager
               event={activeEvent}
+              language={language}
               onUpdateEvent={handleUpdateActiveEvent}
               onOpenCopilotWithPrompt={handleOpenCopilotWithPrompt}
             />
@@ -284,12 +338,17 @@ export function App() {
               onUpdateEvent={handleUpdateActiveEvent}
             />
           )}
+
+          {activeTab === WorkspaceTab.DIAGNOSTICS && (
+            <GuardrailDiagnostics event={activeEvent} language={language} />
+          )}
         </main>
       </div>
 
       {/* New Event Blueprint Modal */}
       <NewEventWizardModal
         isOpen={isWizardOpen}
+        language={language}
         onClose={() => setIsWizardOpen(false)}
         onCreated={handleCreatedEvent}
       />
@@ -297,6 +356,7 @@ export function App() {
       {/* Contextual AI Copilot Drawer */}
       <CopilotDrawer
         event={activeEvent}
+        language={language}
         isOpen={isCopilotOpen}
         initialPrompt={copilotPrompt}
         onClearInitialPrompt={() => setCopilotPrompt(null)}
