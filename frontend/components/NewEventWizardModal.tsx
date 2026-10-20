@@ -1,65 +1,88 @@
 import React, { useState } from 'react';
-import { Sparkles, X, Calendar, MapPin, Users, DollarSign, Wand2, Loader2 } from 'lucide-react';
-import { EventPlan, EventType } from '../types';
+import {
+  Sparkles,
+  X,
+  Calendar,
+  MapPin,
+  Users,
+  IndianRupee,
+  Wand2,
+  Loader2,
+  ShieldCheck,
+} from 'lucide-react';
+import { EventPlan, EventType, SupportedLanguage } from '../types';
 import { generateFullEventBlueprint } from '../services/geminiService';
+import { SUPPORTED_LANGUAGES } from '../services/i18nService';
 
 interface NewEventWizardModalProps {
   isOpen: boolean;
+  language: SupportedLanguage;
   onClose: () => void;
   onCreated: (newPlan: EventPlan) => void;
 }
 
 const PRESET_VIBES: Record<EventType, string[]> = {
   [EventType.WEDDING]: [
-    'Coastal Linen & Driftwood',
-    'Candlelit Tuscan Greenhouse',
-    'Modern Art Gallery Black-Tie',
-    'Wildflower Meadow & Folk Band',
+    'Royal Rajasthani Haveli & Marigolds',
+    'Maharashtrian Paithani & Temple Courtyard',
+    'South Indian Banana Leaf & Mogra Mandapam',
+    'Intimate Glasshouse Sangeet & Sufi Night',
   ],
   [EventType.BIRTHDAY]: [
-    '70s Tokyo Vinyl & Mezcal Lounge',
-    'Amalfi Citrus Garden Brunch',
-    'Midnight Velvet Speakeasy Dinner',
-    'Desert Stargazing & Chef’s Table',
+    'Bombay Art Deco Terrace & Unplugged Ghazals',
+    'Golden 50th Courtyard High-Tea & Thali',
+    '70s Retro Bollywood Vinyl & Chaat Bar',
+    'Starlit Farmhouse Chef’s Table',
   ],
   [EventType.COMMUNITY]: [
-    'Autumn Farm-to-Street Harvest Table',
-    'Neighborhood Botanical & Ceramics Market',
-    'Summer Solstice Twilight Cinema & Food Trucks',
-    'Charity Art Auction & Jazz Courtyard',
+    'Eco-Friendly Ganeshotsav / Diwali Faral Bazaar',
+    'Society Winter Millet & Organic Farmers Haat',
+    'Classical Marathi Abhang & Clay Diya Utsav',
+    'Neighborhood Zero-Waste Cultural Mela',
   ],
 };
 
 export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
   isOpen,
+  language,
   onClose,
   onCreated,
 }) => {
   const [type, setType] = useState<EventType>(EventType.WEDDING);
   const [title, setTitle] = useState('');
-  const [date, setDate] = useState('2025-10-12');
-  const [location, setLocation] = useState('');
-  const [guestCount, setGuestCount] = useState(100);
-  const [totalBudget, setTotalBudget] = useState(35000);
+  const [date, setDate] = useState('2025-11-28');
+  const [location, setLocation] = useState('Pune / Udaipur Heritage Courtyard');
+  const [guestCount, setGuestCount] = useState(200);
+  const [totalBudget, setTotalBudget] = useState(1800000);
   const [vibeDescription, setVibeDescription] = useState(
-    'Warm architectural minimalism, long linen banquet tables, seasonal botanical installations, and unforgettable hospitality.'
+    'Warm Indian heritage hospitality, marigold & mogra floral installations, live chaat & regional feast counters, and soulful acoustic music.'
+  );
+  const [dietaryNotes, setDietaryNotes] = useState(
+    'Pure Vegetarian, Separate Jain Counter (No onion/garlic), Vegan & Diabetic-friendly options'
+  );
+  const [accessibilityNotes, setAccessibilityNotes] = useState(
+    'Step-free wheelchair ramps to Mandap/Stage, shaded senior citizen lounge, low-decibel dining zone'
   );
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  const langMeta =
+    SUPPORTED_LANGUAGES.find((l) => l.code === language) ||
+    SUPPORTED_LANGUAGES[0];
+
   const handleSelectType = (newType: EventType) => {
     setType(newType);
     if (newType === EventType.WEDDING) {
-      setGuestCount(120);
-      setTotalBudget(48000);
+      setGuestCount(200);
+      setTotalBudget(1800000);
     } else if (newType === EventType.BIRTHDAY) {
-      setGuestCount(50);
-      setTotalBudget(9500);
+      setGuestCount(80);
+      setTotalBudget(450000);
     } else {
-      setGuestCount(250);
-      setTotalBudget(15000);
+      setGuestCount(500);
+      setTotalBudget(400000);
     }
   };
 
@@ -72,16 +95,19 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
         title:
           title.trim() ||
           (type === EventType.WEDDING
-            ? 'Autumn Conservatory Wedding'
+            ? 'Rohan & Ishita — Heritage Courtyard Vivah'
             : type === EventType.BIRTHDAY
-            ? 'Milestone Golden Hour Soirée'
-            : 'Neighborhood Makers & Harvest Gathering'),
+            ? 'Golden Jubilee Sufi & Art Deco Soirée'
+            : 'Neighborhood Eco-Diwali & Craft Utsav'),
         type,
         date,
-        location: location.trim() || 'Botanical Courtyard & Loft',
-        guestCount: Number(guestCount) || 80,
-        totalBudget: Number(totalBudget) || 20000,
+        location: location.trim() || 'Pune, Maharashtra',
+        guestCount: Number(guestCount) || 150,
+        totalBudget: Number(totalBudget) || 1000000,
         vibeDescription,
+        dietaryNotes,
+        accessibilityNotes,
+        language,
       });
       onCreated(plan);
       onClose();
@@ -107,52 +133,59 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
           <X className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-[#C86D51] font-semibold mb-2">
+        <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.14em] text-[#C86D51] font-semibold mb-2">
           <Sparkles className="w-4 h-4" />
-          <span>Bespoke AI Event Architect</span>
+          <span>PromptWars Enterprise Architect ({langMeta.nativeName})</span>
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#3B6E52]/10 text-[#3B6E52] text-[10px]">
+            <ShieldCheck className="w-3 h-3" />
+            <span>&lt;user_event_context&gt; Sanitized</span>
+          </span>
         </div>
+
         <h2 className="font-serif text-3xl md:text-4xl font-semibold text-[#1C1917] mb-2">
           Commission a New Event Blueprint
         </h2>
         <p className="text-sm text-[#68625D] mb-6">
-          Gemini will architect a tailored budget allocation, multi-month production timeline, vendor checklist, and sensory moodboard.
+          Automatically enforces a 100% balanced budget with an 8% emergency contingency buffer, realistic countdown timeline, and cultural/dietary inclusivity.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Event Archetype */}
           <div>
             <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-2">
-              1. Select Event Archetype
+              1. Select Celebration Archetype
             </label>
             <div className="grid grid-cols-3 gap-3">
-              {[EventType.WEDDING, EventType.BIRTHDAY, EventType.COMMUNITY].map((item) => {
-                const active = type === item;
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    onClick={() => handleSelectType(item)}
-                    className={`py-3 px-4 rounded-xl border text-left transition-all ${
-                      active
-                        ? 'bg-[#1C1917] text-[#FBF9F5] border-[#1C1917] shadow-sm'
-                        : 'bg-[#F3EFEA]/60 text-[#1C1917] border-[#E6E0D6] hover:border-[#C86D51]'
-                    }`}
-                  >
-                    <div className="font-serif text-lg font-medium">{item}</div>
-                    <div
-                      className={`text-xs mt-0.5 ${
-                        active ? 'text-[#E6E0D6]' : 'text-[#68625D]'
+              {[EventType.WEDDING, EventType.BIRTHDAY, EventType.COMMUNITY].map(
+                (item) => {
+                  const active = type === item;
+                  return (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => handleSelectType(item)}
+                      className={`py-3 px-4 rounded-xl border text-left transition-all ${
+                        active
+                          ? 'bg-[#1C1917] text-[#FBF9F5] border-[#1C1917] shadow-sm'
+                          : 'bg-[#F3EFEA]/60 text-[#1C1917] border-[#E6E0D6] hover:border-[#C86D51]'
                       }`}
                     >
-                      {item === EventType.WEDDING
-                        ? 'Ceremony & reception'
-                        : item === EventType.BIRTHDAY
-                        ? 'Milestone & dinner'
-                        : 'Festival & local gather'}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="font-serif text-lg font-medium">{item}</div>
+                      <div
+                        className={`text-xs mt-0.5 ${
+                          active ? 'text-[#E6E0D6]' : 'text-[#68625D]'
+                        }`}
+                      >
+                        {item === EventType.WEDDING
+                          ? 'Vivah, Sangeet & Reception'
+                          : item === EventType.BIRTHDAY
+                          ? 'Milestone Soirée & Feast'
+                          : 'Sarvajanik Utsav & Mela'}
+                      </div>
+                    </button>
+                  );
+                }
+              )}
             </div>
           </div>
 
@@ -165,13 +198,7 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
               <input
                 type="text"
                 required
-                placeholder={
-                  type === EventType.WEDDING
-                    ? 'e.g., Elena & Marcus — Sonoma Vineyard Wedding'
-                    : type === EventType.BIRTHDAY
-                    ? 'e.g., Naomi’s 40th — Candlelit Jazz Supper'
-                    : 'e.g., Linden Street Spring Botanical Fair'
-                }
+                placeholder="e.g., Siddharth & Kiara — Royal Pune Peshwa Wedding"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-lg bg-white border border-[#E6E0D6] text-sm text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
@@ -180,14 +207,14 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
 
             <div>
               <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-1.5">
-                City or Venue Setting
+                City &amp; Venue Setting
               </label>
               <div className="relative">
                 <MapPin className="w-4 h-4 text-[#68625D] absolute left-3 top-3" />
                 <input
                   type="text"
                   required
-                  placeholder="e.g., Santa Barbara, CA or Rooftop Conservatory"
+                  placeholder="e.g., Jaipur, Mumbai, Pune, Goa"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full pl-9 pr-3.5 py-2.5 rounded-lg bg-white border border-[#E6E0D6] text-sm text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
@@ -200,7 +227,7 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-1.5">
-                Target Date
+                Target Date / Muhurat
               </label>
               <div className="relative">
                 <Calendar className="w-4 h-4 text-[#68625D] absolute left-3 top-3" />
@@ -221,8 +248,8 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
                 <Users className="w-4 h-4 text-[#68625D] absolute left-3 top-3" />
                 <input
                   type="number"
-                  min={5}
-                  max={5000}
+                  min={10}
+                  max={10000}
                   value={guestCount}
                   onChange={(e) => setGuestCount(Number(e.target.value))}
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-[#E6E0D6] text-sm font-mono text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
@@ -232,14 +259,14 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
 
             <div>
               <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-1.5">
-                Total Budget (USD)
+                Total Budget Cap (INR ₹)
               </label>
               <div className="relative">
-                <DollarSign className="w-4 h-4 text-[#68625D] absolute left-3 top-3" />
+                <IndianRupee className="w-4 h-4 text-[#68625D] absolute left-3 top-3" />
                 <input
                   type="number"
-                  min={500}
-                  step={500}
+                  min={10000}
+                  step={10000}
                   value={totalBudget}
                   onChange={(e) => setTotalBudget(Number(e.target.value))}
                   className="w-full pl-9 pr-3 py-2.5 rounded-lg bg-white border border-[#E6E0D6] text-sm font-mono text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
@@ -248,13 +275,39 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
             </div>
           </div>
 
-          {/* Aesthetic & Sensory Direction */}
+          {/* Dietary & Accessibility Guardrail #4 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-1.5">
+                Dietary Nuances (Jain / Sattvic / Vegan)
+              </label>
+              <input
+                type="text"
+                value={dietaryNotes}
+                onChange={(e) => setDietaryNotes(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-lg bg-white border border-[#E6E0D6] text-xs text-[#1C1917]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D] mb-1.5">
+                Accessibility &amp; Elder Care Needs
+              </label>
+              <input
+                type="text"
+                value={accessibilityNotes}
+                onChange={(e) => setAccessibilityNotes(e.target.value)}
+                className="w-full px-3.5 py-2 rounded-lg bg-white border border-[#E6E0D6] text-xs text-[#1C1917]"
+              />
+            </div>
+          </div>
+
+          {/* Aesthetic & Cultural Direction */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="block text-xs uppercase tracking-wider font-semibold text-[#68625D]">
-                Aesthetic Direction &amp; Priorities
+                Cultural &amp; Aesthetic Direction
               </label>
-              <span className="text-xs text-[#68625D]">Click a quick vibe tag to append</span>
+              <span className="text-xs text-[#68625D]">Click a tag to append</span>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {PRESET_VIBES[type].map((preset) => (
@@ -273,11 +326,10 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
               ))}
             </div>
             <textarea
-              rows={3}
+              rows={2}
               value={vibeDescription}
               onChange={(e) => setVibeDescription(e.target.value)}
-              placeholder="Describe the atmosphere, music, culinary style, and non-negotiables..."
-              className="w-full p-3.5 rounded-lg bg-white border border-[#E6E0D6] text-sm text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
+              className="w-full p-3 rounded-lg bg-white border border-[#E6E0D6] text-sm text-[#1C1917] focus:outline-none focus:border-[#C86D51]"
             />
           </div>
 
@@ -304,12 +356,12 @@ export const NewEventWizardModal: React.FC<NewEventWizardModalProps> = ({
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Architecting Blueprint with Gemini...</span>
+                  <span>Architecting in {langMeta.nativeName}...</span>
                 </>
               ) : (
                 <>
                   <Wand2 className="w-4 h-4" />
-                  <span>Generate Full Event Plan</span>
+                  <span>Generate Blueprint ({langMeta.nativeName})</span>
                 </>
               )}
             </button>
