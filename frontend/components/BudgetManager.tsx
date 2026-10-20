@@ -11,14 +11,18 @@ import {
   Trash2,
   Sparkles,
   TrendingDown,
-  DollarSign,
   AlertCircle,
   CheckCircle2,
+  ShieldCheck,
+  Scale,
 } from 'lucide-react';
-import { BudgetLineItem, EventPlan } from '../types';
+import { BudgetLineItem, EventPlan, SupportedLanguage } from '../types';
+import { formatINR, UI_TRANSLATIONS } from '../services/i18nService';
+import { normalizeBudgetWithContingency } from '../services/guardrailEngine';
 
 interface BudgetManagerProps {
   event: EventPlan;
+  language: SupportedLanguage;
   onUpdateEvent: (updated: Partial<EventPlan>) => void;
   onOpenCopilotWithPrompt: (prompt: string) => void;
 }
@@ -35,6 +39,7 @@ const CHART_COLORS = [
 
 export const BudgetManager: React.FC<BudgetManagerProps> = ({
   event,
+  language,
   onUpdateEvent,
   onOpenCopilotWithPrompt,
 }) => {
@@ -43,14 +48,41 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
   const [newEstimated, setNewEstimated] = useState('');
   const [newActual, setNewActual] = useState('');
 
+  const t = UI_TRANSLATIONS[language];
+
   const totalEstimated = event.budgetItems.reduce((acc, item) => acc + item.estimated, 0);
   const totalActual = event.budgetItems.reduce((acc, item) => acc + item.actual, 0);
   const remaining = event.totalBudget - totalActual;
+
+  const contingencySum = event.budgetItems
+    .filter(
+      (i) =>
+        i.isContingency ||
+        /contingency|emergency|आपातकालीन|राखीव/i.test(`${i.category} ${i.itemName}`)
+    )
+    .reduce((s, i) => s + i.estimated, 0);
+
+  const contingencyPct =
+    event.totalBudget > 0
+      ? Number(((contingencySum / event.totalBudget) * 100).toFixed(1))
+      : 0;
+
+  const isExact100Sum = Math.abs(totalEstimated - event.totalBudget) <= 1;
+  const isContingencyValid = contingencyPct >= 5 && contingencyPct <= 10;
 
   const chartData = event.budgetItems.map((item) => ({
     name: item.category,
     value: item.actual > 0 ? item.actual : item.estimated,
   }));
+
+  const handleEnforceGuardrail3 = () => {
+    const { normalizedItems } = normalizeBudgetWithContingency(
+      event.budgetItems,
+      event.totalBudget,
+      0.08
+    );
+    onUpdateEvent({ budgetItems: normalizedItems });
+  };
 
   const handleFieldChange = (
     id: string,
@@ -92,53 +124,79 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Top Summary & AI Rebalance Bar */}
+      {/* Top Summary & Guardrail #3 Enforcement Bar */}
       <div className="bg-white border border-[#E6E0D6] rounded-2xl p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-[#E6E0D6]">
           <div>
-            <span className="text-xs uppercase tracking-[0.12em] text-[#C86D51] font-semibold">
-              Financial Architecture
-            </span>
-            <h2 className="font-serif text-3xl font-semibold text-[#1C1917]">
-              Event Budget &amp; Allocation Ledger
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-[0.12em] text-[#C86D51] font-semibold">
+                {t.financialLedger}
+              </span>
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                  isExact100Sum && isContingencyValid
+                    ? 'bg-[#3B6E52]/10 text-[#3B6E52]'
+                    : 'bg-[#D4A359]/20 text-[#966922]'
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>
+                  {isExact100Sum && isContingencyValid
+                    ? `${t.contingencyEnforcedBadge} (${contingencyPct}%)`
+                    : `Contingency: ${contingencyPct}% • Click Re-Lock 100%`}
+                </span>
+              </span>
+            </div>
+            <h2 className="font-serif text-3xl font-semibold text-[#1C1917] mt-1">
+              Event Budget &amp; Contingency Ledger
             </h2>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
             <button
+              onClick={handleEnforceGuardrail3}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#4A6B5D] hover:bg-[#3d594d] text-white text-xs font-semibold transition-colors shadow-sm"
+              title="Deterministically scale line items to 100% of cap with an 8% Emergency Contingency Reserve"
+            >
+              <Scale className="w-4 h-4" />
+              <span>Enforce 100% Cap + 8% Contingency</span>
+            </button>
+
+            <button
               onClick={() =>
                 onOpenCopilotWithPrompt(
-                  `Please rebalance our budget items so the total actual spend is 10% under our $${event.totalBudget.toLocaleString()} target cap while protecting guest food & beverage quality.`
+                  `Rebalance our budget items so total spend is 100% within ${formatINR(event.totalBudget, language)}, maintaining an 8% emergency contingency buffer while optimizing venue and catering costs.`
                 )
               }
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F3EFEA] hover:bg-[#E6E0D6] text-[#1C1917] text-xs font-semibold transition-colors"
             >
               <TrendingDown className="w-4 h-4 text-[#4A6B5D]" />
-              <span>AI Trim Spend by 10%</span>
+              <span>AI Rebalance</span>
             </button>
+
             <button
               onClick={() =>
                 onOpenCopilotWithPrompt(
-                  `Analyze our ${event.type} budget for ${event.guestCount} guests and identify any hidden costs or missing line items (like gratuities, rain plan, or lighting).`
+                  `Audit our ${event.type} budget for ${event.guestCount} guests in ${event.location} for any hidden Indian event costs (generator diesel, PPL/IPRS music license, Safawala, or monsoon backup).`
                 )
               }
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1C1917] hover:bg-[#C86D51] text-white text-xs font-semibold transition-colors"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Spot Hidden Costs with AI</span>
+              <span>Spot Hidden Costs</span>
             </button>
           </div>
         </div>
 
-        {/* 4 Metric Blocks + Donut */}
+        {/* 3 Metric Blocks + Donut */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-6 items-center">
           <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-[#FBF9F5] border border-[#E6E0D6]">
               <div className="text-xs uppercase tracking-wider text-[#68625D] mb-1">
-                Target Budget Cap
+                {t.targetCap} (INR)
               </div>
-              <div className="flex items-center gap-1 font-mono text-2xl font-semibold text-[#1C1917]">
-                <span>$</span>
+              <div className="flex items-center gap-1 font-mono text-xl font-semibold text-[#1C1917]">
+                <span>₹</span>
                 <input
                   type="number"
                   value={event.totalBudget}
@@ -150,19 +208,20 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                 />
               </div>
               <div className="text-[11px] text-[#68625D] mt-1">
-                Click amount to adjust cap
+                {formatINR(event.totalBudget, language)}
               </div>
             </div>
 
             <div className="p-4 rounded-xl bg-[#FBF9F5] border border-[#E6E0D6]">
               <div className="text-xs uppercase tracking-wider text-[#68625D] mb-1">
-                Actual / Committed
+                Allocated / Committed
               </div>
-              <div className="font-mono text-2xl font-semibold text-[#1C1917]">
-                ${totalActual.toLocaleString()}
+              <div className="font-mono text-xl font-semibold text-[#1C1917]">
+                {formatINR(totalActual, language)}
               </div>
               <div className="text-[11px] text-[#68625D] mt-1">
-                Estimated: ${totalEstimated.toLocaleString()}
+                Est: {formatINR(totalEstimated, language)} (
+                {Math.round((totalEstimated / Math.max(1, event.totalBudget)) * 100)}%)
               </div>
             </div>
 
@@ -179,19 +238,22 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                 ) : (
                   <AlertCircle className="w-3.5 h-3.5 text-[#B84A39]" />
                 )}
-                <span>{remaining >= 0 ? 'Remaining Buffer' : 'Over Budget'}</span>
+                <span>
+                  {remaining >= 0 ? 'Contingency + Buffer' : t.overBudget}
+                </span>
               </div>
               <div
-                className={`font-mono text-2xl font-semibold ${
+                className={`font-mono text-xl font-semibold ${
                   remaining >= 0 ? 'text-[#3B6E52]' : 'text-[#B84A39]'
                 }`}
               >
                 {remaining >= 0
-                  ? `$${remaining.toLocaleString()}`
-                  : `-$${Math.abs(remaining).toLocaleString()}`}
+                  ? formatINR(contingencySum + remaining, language)
+                  : `-${formatINR(Math.abs(remaining), language)}`}
               </div>
               <div className="text-[11px] text-[#68625D] mt-1">
-                ${Math.round(totalActual / Math.max(1, event.guestCount))} per guest
+                {formatINR(Math.round(totalActual / Math.max(1, event.guestCount)), language)}
+                {t.perGuest}
               </div>
             </div>
           </div>
@@ -216,12 +278,12 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => `$${Number(value).toLocaleString()}`}
+                  formatter={(value: number) => formatINR(Number(value), language)}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="space-y-1.5 text-xs max-w-[180px]">
-              {chartData.slice(0, 5).map((entry, idx) => (
+              {chartData.slice(0, 6).map((entry, idx) => (
                 <div key={idx} className="flex items-center gap-2 truncate">
                   <span
                     className="w-2.5 h-2.5 rounded-full shrink-0"
@@ -245,19 +307,26 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
               <tr className="border-b border-[#E6E0D6] bg-[#F3EFEA]/60 text-[11px] uppercase tracking-wider text-[#68625D]">
                 <th className="py-3.5 px-4">Category</th>
                 <th className="py-3.5 px-4">Line Item Description</th>
-                <th className="py-3.5 px-4 text-right">Estimated ($)</th>
-                <th className="py-3.5 px-4 text-right">Actual / Quoted ($)</th>
-                <th className="py-3.5 px-4 text-right">Variance</th>
+                <th className="py-3.5 px-4 text-right">Share %</th>
+                <th className="py-3.5 px-4 text-right">Estimated (₹)</th>
+                <th className="py-3.5 px-4 text-right">Actual / Quoted (₹)</th>
                 <th className="py-3.5 px-4 w-12"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E6E0D6] text-sm">
               {event.budgetItems.map((item) => {
-                const diff = item.estimated - item.actual;
+                const pct =
+                  event.totalBudget > 0
+                    ? ((item.estimated / event.totalBudget) * 100).toFixed(1)
+                    : '0.0';
                 return (
                   <tr
                     key={item.id}
-                    className="hover:bg-[#FBF9F5] transition-colors group"
+                    className={`transition-colors group ${
+                      item.isContingency
+                        ? 'bg-[#4A6B5D]/5 hover:bg-[#4A6B5D]/10'
+                        : 'hover:bg-[#FBF9F5]'
+                    }`}
                   >
                     <td className="py-3 px-4 font-medium text-[#1C1917]">
                       <input
@@ -279,6 +348,9 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                         className="bg-transparent border-b border-transparent focus:border-[#C86D51] focus:outline-none w-full text-[#1C1917]"
                       />
                     </td>
+                    <td className="py-3 px-4 text-right font-mono text-xs text-[#68625D]">
+                      {pct}%
+                    </td>
                     <td className="py-3 px-4 text-right font-mono">
                       <input
                         type="number"
@@ -290,7 +362,7 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                             Number(e.target.value) || 0
                           )
                         }
-                        className="bg-[#F3EFEA]/60 rounded px-2 py-1 text-right w-28 font-mono focus:outline-none focus:ring-1 focus:ring-[#C86D51]"
+                        className="bg-[#F3EFEA]/60 rounded px-2 py-1 text-right w-32 font-mono focus:outline-none focus:ring-1 focus:ring-[#C86D51]"
                       />
                     </td>
                     <td className="py-3 px-4 text-right font-mono">
@@ -304,21 +376,8 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
                             Number(e.target.value) || 0
                           )
                         }
-                        className="bg-[#F3EFEA]/60 rounded px-2 py-1 text-right w-28 font-mono focus:outline-none focus:ring-1 focus:ring-[#C86D51]"
+                        className="bg-[#F3EFEA]/60 rounded px-2 py-1 text-right w-32 font-mono focus:outline-none focus:ring-1 focus:ring-[#C86D51]"
                       />
-                    </td>
-                    <td className="py-3 px-4 text-right font-mono text-xs">
-                      <span
-                        className={`px-2 py-1 rounded-full ${
-                          diff >= 0
-                            ? 'bg-[#3B6E52]/10 text-[#3B6E52]'
-                            : 'bg-[#B84A39]/10 text-[#B84A39]'
-                        }`}
-                      >
-                        {diff >= 0
-                          ? `+$${diff.toLocaleString()}`
-                          : `-$${Math.abs(diff).toLocaleString()}`}
-                      </span>
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
@@ -343,7 +402,7 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
         >
           <input
             type="text"
-            placeholder="Category (e.g., Lighting)"
+            placeholder="Category (e.g., Mehendi & Haldi)"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
             className="sm:col-span-3 px-3 py-2 rounded-lg bg-white border border-[#E6E0D6] text-xs focus:outline-none focus:border-[#C86D51]"
@@ -357,14 +416,14 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
           />
           <input
             type="number"
-            placeholder="Estimated $"
+            placeholder="Estimated ₹"
             value={newEstimated}
             onChange={(e) => setNewEstimated(e.target.value)}
             className="sm:col-span-2 px-3 py-2 rounded-lg bg-white border border-[#E6E0D6] text-xs font-mono focus:outline-none focus:border-[#C86D51]"
           />
           <input
             type="number"
-            placeholder="Actual $"
+            placeholder="Actual ₹"
             value={newActual}
             onChange={(e) => setNewActual(e.target.value)}
             className="sm:col-span-2 px-3 py-2 rounded-lg bg-white border border-[#E6E0D6] text-xs font-mono focus:outline-none focus:border-[#C86D51]"
@@ -372,6 +431,7 @@ export const BudgetManager: React.FC<BudgetManagerProps> = ({
           <button
             type="submit"
             className="sm:col-span-1 inline-flex items-center justify-center gap-1 py-2 px-3 rounded-lg bg-[#1C1917] hover:bg-[#C86D51] text-white text-xs font-semibold transition-colors"
+            aria-label="Add budget line item"
           >
             <Plus className="w-4 h-4" />
           </button>
