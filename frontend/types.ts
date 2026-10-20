@@ -10,7 +10,10 @@ export enum WorkspaceTab {
   TIMELINE = 'Run of Show & Timeline',
   VENDORS = 'Vendor & Task Checklist',
   STUDIO = 'Creative AI Studio',
+  DIAGNOSTICS = 'Guardrails & Validation Suite',
 }
+
+export type SupportedLanguage = 'en' | 'hi' | 'mr' | 'fr' | 'es';
 
 export type TimelinePhase =
   | '6+ Months Out'
@@ -29,6 +32,7 @@ export interface BudgetLineItem {
   itemName: string;
   estimated: number;
   actual: number;
+  isContingency?: boolean;
   notes?: string;
 }
 
@@ -65,6 +69,22 @@ export interface CreativeIdea {
   imageUrl?: string;
 }
 
+export interface InclusivityProfile {
+  dietaryRequirements: string[];
+  accessibilityNeeds: string[];
+  culturalTraditions: string[];
+}
+
+export interface GuardrailTelemetry {
+  promptInjectionBlocked: boolean;
+  threatTriggersDetected: string[];
+  budgetExact100PercentSum: boolean;
+  contingencyPercentage: number;
+  withinCap: boolean;
+  daysRemainingToEvent: number;
+  lastValidatedAt: string;
+}
+
 export interface EventPlan {
   id: string;
   title: string;
@@ -73,6 +93,7 @@ export interface EventPlan {
   location: string;
   guestCount: number;
   totalBudget: number;
+  currencySymbol?: string;
   vibeKeywords: string[];
   editorialSummary: string;
   colorPalette: { name: string; hex: string }[];
@@ -81,10 +102,13 @@ export interface EventPlan {
   timelineItems: TimelineItem[];
   vendorChecklist: VendorChecklistItem[];
   creativeIdeas: CreativeIdea[];
+  inclusivity?: InclusivityProfile;
+  telemetry?: GuardrailTelemetry;
 }
 
 export interface CopilotActionResult {
   replyText: string;
   updatedPlan?: Partial<EventPlan>;
   appliedBadge?: string;
+  securityFlagged?: boolean;
 }
