@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fête &amp; Folio — AI Event Planning Atelier</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+              sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              alabaster: '#FBF9F5',
+              sand: '#F3EFEA',
+              espresso: '#1C1917',
+              stonewarm: '#68625D',
+              terracotta: '#C86D51',
+              sage: '#4A6B5D',
+              gold: '#D4A359',
+              divider: '#E6E0D6',
+            }
+          }
+        }
+      }
+    </script>
+      </head>
+  <body class="bg-[#FBF9F5] text-[#1C1917] font-sans antialiased selection:bg-[#C86D51]/20 selection:text-[#1C1917]">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
